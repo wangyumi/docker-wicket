@@ -101,6 +101,10 @@ func (c *context) authAccess(rw web.ResponseWriter, req *web.Request, next web.N
 			return
 		}
 
+	        if c.namespace == ""  && c.repo == "" {
+			return
+		} 
+
 		ok, err = runningContext.Acl.CanAccess(acl.Username(username), c.namespace, c.repo, a.Permission)
 
 		if err != nil {
