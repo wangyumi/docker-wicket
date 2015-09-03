@@ -7,5 +7,6 @@ import (
 	_ "github.com/tg123/docker-wicket/acl/mysqlauth"
 	_ "github.com/tg123/docker-wicket/index/file"
 	_ "github.com/tg123/docker-wicket/index/mem"
+	_ "github.com/tg123/docker-wicket/index/hub"
 	_ "github.com/tg123/docker-wicket/mysqlpwd"
 )
