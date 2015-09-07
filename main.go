@@ -17,6 +17,8 @@ import (
 	"github.com/tg123/docker-wicket/handler"
 	"github.com/tg123/docker-wicket/handler/v1"
 	"github.com/tg123/docker-wicket/handler/v2"
+
+	_ "github.com/tg123/docker-wicket/dbdriver"
 )
 
 // parse conf from env and args

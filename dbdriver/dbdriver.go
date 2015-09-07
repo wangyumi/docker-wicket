@@ -35,6 +35,10 @@ func NewDbDriver() (*DbDriver, error) {
 		return dbc, nil
 	}
 
+	log.SetFlags(log.LstdFlags | log.Lmicroseconds | log.Lshortfile)
+
+	dbc = &DbDriver{}
+
 	var username string
 	var password string
 	var ip string
@@ -49,7 +53,7 @@ func NewDbDriver() (*DbDriver, error) {
 
 	dataSourceName := username + ":" + password + "@tcp(" + ip + ":" + strconv.Itoa(int(port)) + ")/" + database + "?charset=utf8"
 
-	log.Printf("dat source : %s", dataSourceName)
+	log.Printf("INFO: data source : %s", dataSourceName)
 
 	db, err := sql.Open("mysql", dataSourceName)
 
@@ -96,16 +100,17 @@ func (dbc *DbDriver) CanLogin(username string, password string) bool {
 }
 
 func (dbc *DbDriver) CanAccess(username string, namespace string, repo string, permission int) bool {
+	var ret bool
 	if namespace == "library" {
-		return dbc.canAccessPublic(username, namespace, repo, permission)
+		ret = dbc.canAccessPublic(username, namespace, repo, permission)
 	} else {
-		return dbc.canAccessPrivate(username, namespace, repo, permission)
+		ret = dbc.canAccessPrivate(username, namespace, repo, permission)
 	}
+	log.Printf("Verify if user %s can access image %s/%s, permission=%d, canAccess=%t", username, namespace, repo, permission, ret)
+	return ret
 }
 
 func (dbc *DbDriver) canAccessPublic(username string, namespace string, repo string, permission int) (ret bool) {
-
-	defer log.Printf("Verify if user %s can access public image %s/%s, permission=%d, canAccess=%t", username, namespace, repo, permission, ret)
 
 	if permission == 0 {
 		//read
@@ -120,6 +125,7 @@ func (dbc *DbDriver) canAccessPublic(username string, namespace string, repo str
 	switch {
 	case err == sql.ErrNoRows:
 		//first write
+		log.Printf("INFO: do not find repos %s/%s", namespace, repo)
 		ret = true
 		return
 	case err != nil:
@@ -140,7 +146,6 @@ func (dbc *DbDriver) canAccessPublic(username string, namespace string, repo str
 }
 
 func (dbc *DbDriver) canAccessPrivate(username string, namespace string, repo string, permission int) (ret bool) {
-	defer log.Printf("Verify if user %s can access private image %s/%s, permission=%d, canAccess=%t", username, namespace, repo, permission, ret)
 
 	repo = namespace + "/" + repo
 	var user, project string
@@ -149,10 +154,14 @@ func (dbc *DbDriver) canAccessPrivate(username string, namespace string, repo st
 
 	switch {
 	case err == sql.ErrNoRows:
-		//create project proactively if first write a namespace
 		if permission == 1 {
-			if _, err = dbc.db.Exec("insert into t_projects(uid,name,scm_type,scm_address) values(?,?,'none',''", uid, namespace); err != nil {
+			//create project proactively if first write a namespace
+			if err = dbc.db.QueryRow("select uid from t_users where name= ?", username).Scan(&uid); err != nil {
 				log.Printf("ERROR: fail tp create project %s -- %v", namespace, err)
+			} else {
+				if _, err = dbc.db.Exec("insert into t_projects(uid,name,scm_type,scm_address) values(?,?,'none','')", uid, namespace); err != nil {
+					log.Printf("ERROR: fail tp create project %s -- %v", namespace, err)
+				}
 			}
 		}
 		ret = true
@@ -174,6 +183,9 @@ func (dbc *DbDriver) canAccessPrivate(username string, namespace string, repo st
 }
 
 func (dbc *DbDriver) CreateRepo(namespace, repo string) error {
+
+	log.Printf("INFO: will create repo %s/%s", namespace, repo)
+
 	tx, err := dbc.db.Begin()
 	if err != nil {
 		log.Printf("ERROR: create repo (%s/%s) fails -- %v", namespace, repo, err)
@@ -195,6 +207,7 @@ func (dbc *DbDriver) CreateRepo(namespace, repo string) error {
 	err = tx.QueryRow("select t_repos.id from t_repos, t_projects where t_repos.project_id = t_projects.id and t_repos.name=? and  t_projects.name", repo, namespace).Scan(&repo_id)
 	if err == nil {
 		//repo is existing
+		log.Printf("INFO: repo %s/%s is existing in DB", namespace, repo)
 		return nil
 	}
 

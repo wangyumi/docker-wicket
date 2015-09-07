@@ -2,14 +2,15 @@ package dbdriver
 
 import (
 	"github.com/tg123/docker-wicket/acl"
+	"log"
 )
 
-type Driver struct {
+type AclDriver struct {
 	dbc *DbDriver
 }
 
 func init() {
-	d := &Driver{}
+	d := &AclDriver{}
 
 	dbc, err := NewDbDriver()
 
@@ -20,14 +21,15 @@ func init() {
 	d.dbc = dbc
 
 	acl.Register("mysqlauth", d, func() error {
+		log.Printf("INFO: register acl driver mysqlauth")
 		return nil
 	})
 }
 
-func (d *Driver) CanLogin(username acl.Username, password acl.Password) (bool, error) {
+func (d *AclDriver) CanLogin(username acl.Username, password acl.Password) (bool, error) {
 	return d.dbc.CanLogin(string(username), string(password)), nil
 }
 
-func (d *Driver) CanAccess(username acl.Username, namespace, repo string, perm acl.Permission) (bool, error) {
+func (d *AclDriver) CanAccess(username acl.Username, namespace, repo string, perm acl.Permission) (bool, error) {
 	return d.dbc.CanAccess(string(username), namespace, repo, int(perm)), nil
 }
