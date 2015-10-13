@@ -260,7 +260,7 @@ func (dbc *DbDriver) CreateRepoByUser(uid int, namespace, repo string) error {
 		return nil
 	}
 
-	if _, err = tx.Exec("insert into t_repos(uid, project_id, name) values(?, ?, ?)", uid, project_id, repo); err != nil {
+	if _, err = tx.Exec("insert into t_repos(uid, project_id, name, updated) values(?, ?, ?, 0)", uid, project_id, repo); err != nil {
 		log.Printf("ERROR: create repo (%s/%s) fails -- %v", namespace, repo, err)
 	}
 	return nil
